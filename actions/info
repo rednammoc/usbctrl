@@ -1,3 +1,31 @@
 #!/bin/bash
 usb_dev_location=${1}
-echo ${usb_dev_location}
+
+function println() {
+	printf "%15s %s\n" "$1" "$2"		
+}
+
+function print_info() {
+	label=$1
+	file="${usb_dev_location}/$2"
+	if [ -e "${file}" ] ; then
+		no_lines=$(wc -l "${file}" | cut -d' ' -f1)
+		if [[ $no_lines -eq 0 ]] ; then
+			println "$label:" "<empty>"		
+		elif [[ $no_lines -eq 1 ]] ; then
+			println "$label:" "$(cat $file)"
+		else
+			println "$label:" ""
+			cat $file
+		fi
+	fi
+}
+
+print_info "Bus" busnum
+print_info "Dev" devnum
+print_info "VendorId" idVendor
+print_info "ProductId" idProduct
+print_info "Manufacturer" manufacturer
+print_info "Product" product
+print_info "Version" version
+println "Location:" "${usb_dev_location}"
