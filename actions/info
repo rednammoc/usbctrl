@@ -1,0 +1,3 @@
+#!/bin/bash
+usb_dev_location=${1}
+echo ${usb_dev_location}

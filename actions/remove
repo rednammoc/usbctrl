@@ -1,0 +1,7 @@
+#!/bin/bash
+
+usb_dev_location=${1}
+usb_dev_tree=$(basename ${usb_dev_location})
+echo "removing $usb_dev_tree ..."
+echo 1 > ${usb_dev_location}/remove
+

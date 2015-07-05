@@ -1,0 +1,5 @@
+#!/bin/bash
+usb_dev_location=${1}
+usb_dev_tree=$(basename ${usb_dev_location})
+echo "unbinding $usb_dev_tree ..."
+echo "${usb_dev_tree}" > /sys/bus/usb/drivers/usb/unbind

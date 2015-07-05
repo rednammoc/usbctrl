@@ -1,0 +1,14 @@
+#!/bin/bash
+
+usb_dev_location=${1}
+usb_dev_power="${usb_dev_location}/power"
+
+if  [[ -e "${usb_dev_power}/level" ]] ; then
+	echo "auto" > ${usb_dev_power}/level
+elif [[ -e "${usb_dev_power}/control" ]] ; then
+	echo "auto" > ${usb_dev_power}/control
+else
+	echo "No control over power for ${usb_dev_location}!"
+	exit 1
+fi
+
