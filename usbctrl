@@ -1,28 +1,35 @@
 #!/bin/bash
-# name: usbctrl
-# description: easy extendable usb-control util.
-# author: rednammoc
-# date: 15/07/05
-
 
 function usage() {
-        echo "Usage: `basename $0` busnum devnum"
+	echo "Usage: `basename $0` busnum devnum"
 }
 
 function validate_user_input() {
-        choice=$1
-        size=$2
-        re='^[0-9]+$'
-        if ! [[ $choice =~ $re ]] ; then
-                return 1
-        fi
+	choice=$1
+	size=$2
+	re='^[0-9]+$'
+	if ! [[ $choice =~ $re ]] ; then
+		return 1
+	fi
+	
+	if [[ ${choice} -le 0 || ${choice} -gt ${size} ]] ; then
+		return 1
+	fi
 
-        if [[ ${choice} -le 0 || ${choice} -gt ${size} ]] ; then
-                return 1
-        fi
-
-        return 0
+	return 0
 }
+
+function get_source_folder() {
+	source="${BASH_SOURCE[0]}"
+	while [ -h "$source" ]; do 
+	  dir="$( cd -P "$( dirname "$source" )" && pwd )"
+	  source="$(readlink "$source")"
+	  [[ $source != /* ]] && source="$dir/$source" 
+	done
+	echo "$(cd -P "$( dirname "$source" )" && pwd )"
+}
+
+source_folder=$(get_source_folder)
 
 usb_dev_counter=0
 usb_dev_choice=
@@ -31,83 +38,85 @@ usb_dev_location=
 usb_dev_tree=
 
 while read -r line; do
-        usb_dev_counter=$((usb_dev_counter + 1))
-        echo ${usb_dev_counter}: $line
+	usb_dev_counter=$((usb_dev_counter + 1))
+	echo ${usb_dev_counter}: $line
 done <<< "$(lsusb)"
 
 if [[ ${usb_dev_counter} -le 0 ]] ; then
-        echo "No usb devices were found!"
-        exit 1
+	echo "No usb devices were found!"
+	exit 1
 fi
-:q
+
+echo -n "Please select a device to operate on: "
 read usb_dev_choice
 
 if ! validate_user_input "${usb_dev_choice}" "${usb_dev_counter}" ; then
-        echo "Invalid argument."
-        exit 1
+	echo "Invalid argument."
+	exit 1
 fi
 
 busnum_needle=$(lsusb | sed -e "${usb_dev_choice}q;d" | cut -d" " -f2)
 devnum_needle=$(lsusb | sed -e "${usb_dev_choice}q;d" | cut -d" " -f4 | tr -d ':')
 
 if [[ -z ${busnum_needle} || -z ${devnum_needle} ]] ; then
-        echo "Retrieving bus- or device-number failed!"
+	echo "Retrieving bus- or device-number failed!"
 fi
 
-for i in ${usb_dev_src}/*; do
-        if [ -e $i/devnum ] ; then
-                busnum=$(printf "%03d" $(cat $i/busnum))
-                devnum=$(printf "%03d" $(cat $i/devnum))
-                if [[ $busnum = "$busnum_needle" && $devnum = "$devnum_needle" ]] ; then
-                        usb_dev_tree=$(basename $i)
-                        usb_dev_location="${usb_dev_src}/${usb_dev_tree}"
-                fi
-        fi
+for i in ${usb_dev_src}/*; do 
+	if [ -e $i/devnum ] ; then 
+		busnum=$(printf "%03d" $(cat $i/busnum))
+		devnum=$(printf "%03d" $(cat $i/devnum))
+		if [[ $busnum = "$busnum_needle" && $devnum = "$devnum_needle" ]] ; then 
+			usb_dev_tree=$(basename $i)
+			usb_dev_location="${usb_dev_src}/${usb_dev_tree}"
+		fi 
+	fi 
 done
 
 if [ -z "${usb_dev_location}" ] ; then
-        echo "No device found with busnum ${busnum_needle} and devnum ${devnum_needle}!"
-        exit 1
+	echo "No device found with busnum ${busnum_needle} and devnum ${devnum_needle}!"
+	exit 1
 fi
 
 while true ; do
-        action_counter=0
-        action_choice=
-        actions=()
+	action_counter=0
+	action_choice=
+	actions=()
 
-        while read -r line; do
-                action_counter=$((action_counter + 1))
-                echo ${action_counter}: $(basename $line)
-                actions+=($line)
-        done <<< "$(ls $PWD/actions)"
-        action_counter=$((action_counter + 1))
-        echo ${action_counter}: exit
+	while read -r line; do
+		action_counter=$((action_counter + 1))
+		echo ${action_counter}: $(basename $line)
+		actions+=($line)
+	done <<< "$(ls ${source_folder}/actions)"
+	action_counter=$((action_counter + 1))
+	echo ${action_counter}: exit
 
-        if [[ ${action_counter} -le 0 ]] ; then
-                echo "No actions were found!"
-                exit 1
-        fi
+	if [[ ${action_counter} -le 0 ]] ; then
+		echo "No actions were found!"
+		exit 1
+	fi
 
-        echo -n "Please select an action to execute: "
-        read action_choice
-        echo
+	echo -n "Please select an action to execute: "
+	read action_choice
+	echo 
 
-        if ! validate_user_input "${action_choice}" "${action_counter}" ; then
-                echo "Invalid argument."
-                continue
-        fi
-        
-        if [[ ${action_choice} -eq ${action_counter} ]] ; then
-                echo "Bye."
-                exit 1
-        else
-                action=${actions[$((action_choice - 1))]}
-                action_location="$PWD/actions/${action}"
+	if ! validate_user_input "${action_choice}" "${action_counter}" ; then
+		echo "Invalid argument."
+		continue
+	fi
 
-                clear
-                echo "Executing $action' ..."
-                echo
-                $action_location "${usb_dev_location}"
-                echo
-        fi
+	if [[ ${action_choice} -eq ${action_counter} ]] ; then
+		echo "Bye."
+		exit 1
+	else
+		action=${actions[$((action_choice - 1))]}
+		action_location="${source_folder}/actions/${action}"
+		
+		clear
+		echo "Executing $action' ..."
+		echo 
+		$action_location "${usb_dev_location}"
+		echo 
+	fi
 done
+
